@@ -1,0 +1,188 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import 'packages/flavor/get_flavor.dart';
+import 'src/widget/progress_appbar.dart';
+
+void main() {
+  Flavors flavor = Flavor.flavor;
+
+  runApp(MainApp(
+    flavor: flavor,
+  ));
+}
+
+class MainApp extends StatelessWidget {
+  final Flavors flavor;
+  const MainApp({super.key, required this.flavor});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: flavor.isDebug ? true : false,
+      home: Scaffold(
+        body: Center(
+          child: GradientProgressBarScreen(),
+
+          //      AppBarProgress(
+          //   currentProgress: 0.4,
+          // )
+
+          // Text('Hello World! ${flavor.name}'),
+        ),
+      ),
+    );
+  }
+}
+
+/////////////////////
+///
+///
+///
+///
+///
+///
+///
+///
+///
+///
+///
+///
+class GradientProgressBarScreen extends StatefulWidget {
+  @override
+  _GradientProgressBarScreenState createState() =>
+      _GradientProgressBarScreenState();
+}
+
+class _GradientProgressBarScreenState extends State<GradientProgressBarScreen> {
+  double progress = 0.5;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Gradient Progress Bar'),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // LinearProgressIndicator(
+            //   value: 1,
+            //   backgroundColor: Colors.grey[200],
+            // ),
+
+            CustomGradientProgressIndicator(progress: progress),
+            SizedBox(height: 20),
+            Slider(
+              value: progress,
+              onChanged: (value) {
+                setState(() {
+                  progress = value;
+                });
+              },
+              min: 0,
+              max: 1,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+//////////////////////////////
+///
+class CustomGradientProgressIndicator extends StatefulWidget {
+  final double progress;
+  const CustomGradientProgressIndicator({super.key, required this.progress});
+
+  @override
+  State<CustomGradientProgressIndicator> createState() =>
+      _CustomGradientProgressIndicatorState();
+}
+
+class _CustomGradientProgressIndicatorState
+    extends State<CustomGradientProgressIndicator>
+    with TickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Color?> _colorAnimation;
+  late Animation<double>? _progressAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    );
+
+    _colorAnimation = TweenSequence<Color?>(
+      <TweenSequenceItem<Color?>>[
+        TweenSequenceItem(
+          tween: ColorTween(
+              begin: const Color.fromARGB(255, 255, 105, 180), // Pink
+              end: const Color.fromARGB(255, 228, 126, 141)), // Light Pink
+          weight: 33,
+        ),
+        TweenSequenceItem(
+          tween: ColorTween(
+              begin: const Color.fromARGB(255, 233, 173, 182), 
+              end: const Color.fromARGB(255, 241, 129, 223)), 
+          weight: 33,
+        ),
+        TweenSequenceItem(
+          tween: ColorTween(
+              begin: const Color.fromARGB(255, 173, 216, 230), // Light Blue
+              end: const Color.fromARGB(255, 0, 191, 255)), // Deep Sky Blue
+          weight: 34,
+        ),
+      ],
+    ).animate(_controller)
+      ..addListener(() {
+        setState(() {});
+      });
+
+    _progressAnimation =
+        Tween<double>(begin: 0.0, end: widget.progress) // Percentage
+            .animate(CurvedAnimation(
+                parent: _controller, curve: const Interval(0.0, 1.0)));
+    _controller.forward().whenComplete(() {
+      _controller.stop();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant CustomGradientProgressIndicator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.progress != widget.progress) {
+      _progressAnimation = Tween<double>(
+              begin: oldWidget.progress, end: widget.progress) // Percentage
+          .animate(CurvedAnimation(
+              parent: _controller, curve: const Interval(0.0, 1.0)));
+      _controller.forward(from: 0);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 15),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(30),
+        child: LinearProgressIndicator(
+          backgroundColor: Colors.grey[200],
+          value: _progressAnimation?.value, // Progress value
+          valueColor: AlwaysStoppedAnimation<Color?>(_colorAnimation.value),
+        ),
+      ),
+    );
+  }
+}
